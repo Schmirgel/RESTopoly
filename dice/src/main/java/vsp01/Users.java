@@ -3,27 +3,15 @@ package vsp01;
 import static spark.Spark.*;
 
 import java.io.*;
-import java.lang.ProcessBuilder.Redirect.Type;
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
-import java.util.jar.Attributes.Name;
 
 import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonIOException;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-import com.google.gson.JsonSyntaxException;
 import com.google.gson.reflect.TypeToken;
 import com.google.gson.stream.JsonReader;
-import com.google.gson.stream.JsonToken;
-import com.google.gson.stream.JsonWriter;
 
 public class Users {
 	
@@ -107,6 +95,7 @@ public class Users {
 				}
 				
 				randomAccessFile.writeBytes("," + obj.toString() + "]");
+				randomAccessFile.close();
 				
 				return true;
 			} catch (IOException e) {
