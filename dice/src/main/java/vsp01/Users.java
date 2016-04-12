@@ -174,7 +174,7 @@ public class Users {
 		for (int i = 0; i < data.size(); i++) {
 			JsonObject obj = new JsonObject();
 			if(data.get(i).get("id").equals("/users/"+userId)) {
-				// nothing
+				// nichts
 			} else {
 				obj.addProperty("id", data.get(i).get("id"));
 				obj.addProperty("name", data.get(i).get("name"));
