@@ -1,7 +1,6 @@
 package vsp01;
 
 import static spark.Spark.*;
-import static com.google.gson.Gson.*;
 
 import java.util.Random;
 
