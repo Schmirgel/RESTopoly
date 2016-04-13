@@ -17,7 +17,7 @@ public class Users {
 	
 	public static void users() {
 		get("/users", (req, res) -> {
-			return "users: " +getUsers();
+			return "{ \"users\": " +getUsers() + " }";
 		});
 		
 		post("/users", (req, res) -> {
@@ -28,7 +28,13 @@ public class Users {
 		
 		get("/users/:userid", (req, res) -> {
 			String id = req.params(":userid");
-			return getUserID(id);
+			if(getUserID(id) == "false") {
+				res.body("Resource could not be found");
+				res.status(404);
+				return false;
+			} else {
+				return getUserID(id);
+			}
 		});
 
 		put("/users/:userid", (req, res) -> {
@@ -42,7 +48,6 @@ public class Users {
 			String userId = req.params(":userid");
 			return deleteUser(userId);
 		});
-		
 	}
 
 	public static String getUsers() throws FileNotFoundException {
@@ -52,17 +57,17 @@ public class Users {
 		List<HashMap<String, String>> data = gson.fromJson(reader, listType);
 		ArrayList<String> usersResult = new ArrayList<String>();
 		for (int i = 0; i < data.size(); i++) {
-			usersResult.add(data.get(i).get("id"));
+			usersResult.add("\""+data.get(i).get("id")+"\"");
 		}
 		return usersResult.toString();
 	}
 	
-	public static boolean createUser(String name, String uri) throws IOException {
+	public static String createUser(String name, String uri) throws IOException {
 		File file = new File("users.json");
 		
 		if(file.length() == 0) {
 			JsonObject obj = new JsonObject();
-			obj.addProperty("id", "/users/"+name);
+			obj.addProperty("id", "/users/"+name.toLowerCase());
 			obj.addProperty("name", name);
 			obj.addProperty("uri", uri);
 	 
@@ -73,11 +78,11 @@ public class Users {
 				jsonFile.write(users.toString());
 				jsonFile.flush();
 				jsonFile.close();
-				return true;
+				return obj.toString();
 			}
 		} else {
 			JsonObject obj = new JsonObject();
-			obj.addProperty("id", "/users/"+name);
+			obj.addProperty("id", "/users/"+name.toLowerCase());
 			obj.addProperty("name", name);
 			obj.addProperty("uri", uri);
 
@@ -97,10 +102,10 @@ public class Users {
 				randomAccessFile.writeBytes("," + obj.toString() + "]");
 				randomAccessFile.close();
 				
-				return true;
+				return obj.toString();
 			} catch (IOException e) {
 				e.printStackTrace();
-				return false;
+				return "false";
 			}
 		}
 	}
@@ -112,30 +117,36 @@ public class Users {
 		List<HashMap<String, String>> data = gson.fromJson(reader, listType);
 		
 		for (int i = 0; i < data.size(); i++) {
-			if(data.get(i).get("id").equals("/users/"+id)) {
-				return data.get(i).toString();
+			if(data.get(i).get("id").equals("/users/"+id.toLowerCase())) {
+				JsonObject result = new JsonObject();
+				result.addProperty("id", data.get(i).get("id"));
+				result.addProperty("name", data.get(i).get("name"));
+				result.addProperty("uri", data.get(i).get("uri"));
+				return result.toString();
 			}
 		}
-		return "ID not found.";
+		return "false";
 	}
 	
-	private static boolean updateUser(String userId, String name, String uri) throws IOException {
+	private static String updateUser(String userId, String name, String uri) throws IOException {
 		java.lang.reflect.Type listType = new TypeToken<List<HashMap<String, String>>>() {}.getType();
 		Gson gson = new Gson();
 		JsonReader reader = new JsonReader(new FileReader("users.json"));
 		List<HashMap<String, String>> data = gson.fromJson(reader, listType);
+		String jsonResult = "";
 		
 		JsonArray result = new JsonArray();
 		boolean found = false;
 		
 		for (int i = 0; i < data.size(); i++) {
 			JsonObject obj = new JsonObject();
-			if(data.get(i).get("id").equals("/users/"+userId)) {
+			if(data.get(i).get("id").equals("/users/"+userId.toLowerCase())) {
 				obj.addProperty("id", data.get(i).get("id"));
 				obj.addProperty("name", name);
 				obj.addProperty("uri", uri);
 				found = true;
 				result.add(obj);
+				jsonResult = obj.toString();
 			} else {
 				obj.addProperty("id", data.get(i).get("id"));
 				obj.addProperty("name", data.get(i).get("name"));
@@ -146,20 +157,21 @@ public class Users {
 		
 		if(!found) {
 			JsonObject newObj = new JsonObject();
-			newObj.addProperty("id", "/users/"+userId);
+			newObj.addProperty("id", "/users/"+name.toLowerCase());
 			newObj.addProperty("name", name);
 			newObj.addProperty("uri", uri);
 			found = true;
 			result.add(newObj);
+			jsonResult = newObj.toString();
 		}
 		
 		try (FileWriter jsonFile = new FileWriter("users.json")) {
 			jsonFile.write(result.toString());
 			jsonFile.flush();
 			jsonFile.close();
-			return true;
+			return jsonResult;
 		} catch (IOException e) {
-			return false;
+			return "false";
 		}
 	}
 	
