@@ -21,9 +21,9 @@ public class Users {
 		});
 		
 		post("/users", (req, res) -> {
-			String name = req.queryParams("name");
-			String uri = req.queryParams("uri");
-			return createUser(name, uri);
+			String requestBody = req.body();
+			
+			return createUser(requestBody);
 		});
 		
 		get("/users/:userid", (req, res) -> {
@@ -62,12 +62,23 @@ public class Users {
 		return usersResult.toString();
 	}
 	
-	public static String createUser(String name, String uri) throws IOException {
+	public static String createUser(String requestBody) throws IOException {
+		Gson gson = new Gson();
+		java.lang.reflect.Type listType = new TypeToken<HashMap<Object, Object>>() {}.getType();
+		HashMap<Object, Object> data = gson.fromJson(requestBody, listType);
+		String id = data.get("id").toString();
+		String name = data.get("name").toString();
+		String uri = data.get("uri").toString();
+		
 		File file = new File("users.json");
 		
 		if(file.length() == 0) {
 			JsonObject obj = new JsonObject();
-			obj.addProperty("id", "/users/"+name.toLowerCase());
+			if(id.isEmpty()) {
+				obj.addProperty("id", "/users/"+name.toLowerCase());
+			} else {
+				obj.addProperty("id", id);
+			}
 			obj.addProperty("name", name);
 			obj.addProperty("uri", uri);
 	 
@@ -82,7 +93,11 @@ public class Users {
 			}
 		} else {
 			JsonObject obj = new JsonObject();
-			obj.addProperty("id", "/users/"+name.toLowerCase());
+			if(id.isEmpty()) {
+				obj.addProperty("id", "/users/"+name.toLowerCase());
+			} else {
+				obj.addProperty("id", id);
+			}
 			obj.addProperty("name", name);
 			obj.addProperty("uri", uri);
 
