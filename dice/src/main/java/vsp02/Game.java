@@ -317,7 +317,7 @@ public class Game {
 			HashMap<Object, Object> game = new HashMap<Object, Object>();
 			String gameId = "/games/"+data.get("name").toString().toLowerCase();
 
-			if(checkGameIdExists(data.get("name").toString().toLowerCase())) {
+			if(checkGameIdExists(data.get("name").toString())) {
 				return false;
 			} else {
 				game.put("id", gameId);
@@ -592,14 +592,13 @@ public class Game {
 			String playername = (playerArray.get(i)).split("/")[4];
 			for (int j = 0; j < players.size(); j++) {
 				if(players.get(j).get("user").toString().equals("/user/"+playername)) {
-					System.out.println(players.get(i));
+
 					players.get(j).put("id", dataBody.get("id"));
 					players.get(j).put("user", dataBody.get("user"));
 					players.get(j).put("ready", dataBody.get("ready"));
 					players.get(j).put("pawn", dataBody.get("account"));
 					players.get(j).put("readyUri", dataBody.get("readyUri"));
 					
-					System.out.println(players.toString());
 					return true;
 				}
 			}
