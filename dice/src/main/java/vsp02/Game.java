@@ -37,6 +37,7 @@ public class Game {
 				res.status(201);
 				return true;
 			} else {
+				res.status(409);
 				return false;
 			}
 		});
@@ -316,17 +317,21 @@ public class Game {
 			HashMap<Object, Object> game = new HashMap<Object, Object>();
 			String gameId = "/games/"+data.get("name").toString().toLowerCase();
 
-			game.put("id", gameId);
-			game.put("name", data.get("name").toString());
-			game.put("players", gameId +"/players");
-			game.put("started", false);
-			game.put("status", "registration");
-			game.put("services", data.get("services"));
-			game.put("components", data.get("components"));
-			
-			games.add(game);
-			
-			return true;
+			if(checkGameIdExists(data.get("name").toString().toLowerCase())) {
+				return false;
+			} else {
+				game.put("id", gameId);
+				game.put("name", data.get("name").toString());
+				game.put("players", gameId +"/players");
+				game.put("started", false);
+				game.put("status", "registration");
+				game.put("services", data.get("services"));
+				game.put("components", data.get("components"));
+				
+				games.add(game);
+				
+				return true;
+			}
 		} else {
 			return false;
 		}
