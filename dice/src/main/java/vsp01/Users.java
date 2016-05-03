@@ -41,7 +41,9 @@ public class Users {
 			String userId = req.params(":userid");
 			String name = req.queryParams("name");
 			String uri = req.queryParams("uri");
-			return updateUser(userId, name, uri);
+			String requestBody = req.body();
+			
+			return updateUser(userId, name, uri, requestBody);
 		});
 		
 		delete("/users/:userid", (req, res) -> {
@@ -143,7 +145,8 @@ public class Users {
 		return "false";
 	}
 	
-	private static String updateUser(String userId, String name, String uri) throws IOException {
+	private static String updateUser(String userId, String name, String uri, String requestBody) throws IOException {
+
 		java.lang.reflect.Type listType = new TypeToken<List<HashMap<String, String>>>() {}.getType();
 		Gson gson = new Gson();
 		JsonReader reader = new JsonReader(new FileReader("users.json"));
@@ -153,12 +156,28 @@ public class Users {
 		JsonArray result = new JsonArray();
 		boolean found = false;
 		
-		for (int i = 0; i < data.size(); i++) {
+		String newId = "";
+		String newName = "";
+		String newUri = "";
+		
+		if(requestBody.isEmpty()) {
+			newName = name;
+			newUri = uri;
+		} else {
+			Gson gsonBody = new Gson();
+			java.lang.reflect.Type listTypeBody = new TypeToken<HashMap<Object, Object>>() {}.getType();
+			HashMap<Object, Object> dataBody = gsonBody.fromJson(requestBody, listTypeBody);
+			
+			newName = dataBody.get("name").toString();
+			newUri = dataBody.get("uri").toString();
+		}
+		
+		for (int i = 0; i < data.size(); i++) {		
 			JsonObject obj = new JsonObject();
 			if(data.get(i).get("id").equals("/users/"+userId.toLowerCase())) {
 				obj.addProperty("id", data.get(i).get("id"));
-				obj.addProperty("name", name);
-				obj.addProperty("uri", uri);
+				obj.addProperty("name", newName);
+				obj.addProperty("uri", newUri);
 				found = true;
 				result.add(obj);
 				jsonResult = obj.toString();
@@ -172,9 +191,9 @@ public class Users {
 		
 		if(!found) {
 			JsonObject newObj = new JsonObject();
-			newObj.addProperty("id", "/users/"+name.toLowerCase());
-			newObj.addProperty("name", name);
-			newObj.addProperty("uri", uri);
+			newObj.addProperty("id", "/users/"+newName.toLowerCase());
+			newObj.addProperty("name", newName);
+			newObj.addProperty("uri", newUri);
 			found = true;
 			result.add(newObj);
 			jsonResult = newObj.toString();
