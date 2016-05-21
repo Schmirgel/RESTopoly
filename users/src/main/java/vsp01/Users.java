@@ -2,18 +2,13 @@ package vsp01;
 
 import static spark.Spark.*;
 
-import java.io.*;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
-
-import javax.swing.RowFilter.Entry;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.reflect.TypeToken;
-import com.google.gson.stream.JsonReader;
 
 public class Users {
 	private static ArrayList<HashMap<Object, Object>> users = new ArrayList<HashMap<Object,Object>>();
@@ -30,7 +25,10 @@ public class Users {
 			res.status(201);
 			res.header("Loaction", result);
 			
-			return createUser(requestBody);
+			JsonObject resultUri = new JsonObject();
+			resultUri.addProperty("uri", result);
+			
+			return resultUri.toString();
 		});
 		
 		get("/users/:userid", (req, res) -> {

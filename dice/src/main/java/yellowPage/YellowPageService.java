@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 import com.google.gson.reflect.TypeToken;
 import com.mashape.unirest.http.*;
 import com.mashape.unirest.http.exceptions.UnirestException;
@@ -15,19 +16,21 @@ public class YellowPageService {
 	public static void registerService(String service) throws Exception {
 		InetAddress IP = InetAddress.getLocalHost();
 		String ipaddress = IP.getHostAddress();
-		
-		YellowPage body = new YellowPage();
-		body.setName("Team Awesom");
-		body.setDescription(service + " Service von Team Awesom");
-		body.setService(service);
-		body.setUri("http://"+ipaddress+":4567/"+service);
-		HttpResponse<JsonNode> response = Unirest
-				.post("http://172.18.0.5:4567/services")
-				.header("accept", "application/json")
-				.header("Content-Type", "application/json")
-				.body(body).asJson();
+
+		JsonObject body = new JsonObject();
+		body.addProperty("name", "Team Awesom");
+		body.addProperty("description", service + " Service von Team Awesom");
+		body.addProperty("service", service);
+		body.addProperty("uri", "http://"+ipaddress+":4567/"+service);
+		String bodyString = body.toString();
+	
+		HttpResponse<String> response = Unirest.post("http://172.18.0.5:4567/services")
+				  .header("accept", "application/json")
+				  .header("content-type", "application/json")
+				  .body(bodyString)
+				  .asString();
 		System.out.println(response.getStatus());
-		System.out.println(response.getBody());
+//		System.out.println(response.getBody());
 	}
 	
 	public static String getServices(String service) throws UnirestException {
