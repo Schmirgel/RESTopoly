@@ -60,6 +60,7 @@ public class Users {
 	public static String getUsers() {
 		ArrayList<String> usersResult = new ArrayList<String>();
 		for (HashMap<Object, Object> user : users) {
+			System.out.println(user);
 			usersResult.add(user.get("uri").toString());
 		}
 		return usersResult.toString();
@@ -73,15 +74,22 @@ public class Users {
 		String name = data.get("name").toString();
 		String uri = data.get("uri").toString();
 		
-		HashMap<String, String> user = new HashMap<String, String>();
 		if(id.isEmpty()) {
 			id = "/users/"+name.toLowerCase();
 		}
-		user.put("id", id);
-		user.put("name", name);
-		user.put("uri", uri);
 		
-		return uri;
+		if(getUserID(id) == "false") {
+			HashMap<Object, Object> user = new HashMap<Object, Object>();
+
+			user.put("id", id);
+			user.put("name", name);
+			user.put("uri", uri);
+			
+			users.add(user);
+			
+			return uri;
+		}
+		return "playerid already exists";
 	}
 	
 	private static String getUserID(String id) {
