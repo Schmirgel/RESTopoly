@@ -19,9 +19,11 @@ public class Dice {
 			
 			if(player != null && game != null) {
 				createEvent(rnd, player, game);
+				res.header("Content-Type", "application/json");
 				return "{ \"number\": " + rnd	+ " }";
 			} else {
 //				createEvent(rnd, "spieler", "spiel");
+				res.header("Content-Type", "application/json");
 				return "{ \"number\": " + rnd	+ " }";
 			}
 		});

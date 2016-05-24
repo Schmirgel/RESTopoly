@@ -11,10 +11,11 @@ import com.google.gson.JsonObject;
 import com.google.gson.reflect.TypeToken;
 
 public class Users {
-	private static ArrayList<HashMap<Object, Object>> users = new ArrayList<HashMap<Object,Object>>();
+	private static ArrayList<HashMap<String, String>> users = new ArrayList<HashMap<String,String>>();
 	
 	public static void users() {
 		get("/users", (req, res) -> {
+			res.header("Content-Type", "application/json");
 			return "{ \"users\": " +getUsers() + " }";
 		});
 		
@@ -22,46 +23,55 @@ public class Users {
 			String requestBody = req.body();			
 			String result = createUser(requestBody);
 			
-			res.status(201);
-			res.header("Loaction", result);
-			
-			JsonObject resultUri = new JsonObject();
-			resultUri.addProperty("uri", result);
-			
-			return resultUri.toString();
+			if(result == "false") {
+				res.status(409);
+				return "playerid already exists";
+			} else {
+				res.status(201);
+				res.header("Loaction", result);
+				
+				JsonObject resultUri = new JsonObject();
+				resultUri.addProperty("uri", result);
+				
+				res.header("Content-Type", "application/json");
+				return resultUri.toString();
+			}			
 		});
 		
 		get("/users/:userid", (req, res) -> {
-			String id = req.params(":userid");
+			String id = req.params(":userid").toLowerCase();
 			if(getUserID(id) == "false") {
 				res.body("Resource could not be found");
 				res.status(404);
 				return false;
 			} else {
+				res.header("Content-Type", "application/json");
 				return getUserID(id);
 			}
 		});
 
 		put("/users/:userid", (req, res) -> {
-			String userId = req.params(":userid");
+			String userId = req.params(":userid").toLowerCase();
 			String name = req.queryParams("name");
 			String uri = req.queryParams("uri");
 			String requestBody = req.body();
 			
+			res.header("Content-Type", "application/json");
 			return updateUser(userId, name, uri, requestBody);
 		});
 		
 		delete("/users/:userid", (req, res) -> {
-			String userId = req.params(":userid");
+			String userId = req.params(":userid").toLowerCase();
+			
+			res.header("Content-Type", "application/json");
 			return deleteUser(userId);
 		});
 	}
 
 	public static String getUsers() {
 		ArrayList<String> usersResult = new ArrayList<String>();
-		for (HashMap<Object, Object> user : users) {
-			System.out.println(user);
-			usersResult.add(user.get("uri").toString());
+		for (HashMap<String, String> user : users) {
+			usersResult.add("\""+user.get("id").toString()+"\"");
 		}
 		return usersResult.toString();
 	}
@@ -70,16 +80,16 @@ public class Users {
 		Gson gson = new Gson();
 		java.lang.reflect.Type listType = new TypeToken<HashMap<Object, Object>>() {}.getType();
 		HashMap<Object, Object> data = gson.fromJson(requestBody, listType);
-		String id = data.get("id").toString();
+		String id = data.get("id").toString().toLowerCase();
 		String name = data.get("name").toString();
 		String uri = data.get("uri").toString();
 		
-		if(id.isEmpty()) {
-			id = "/users/"+name.toLowerCase();
-		}
-		
 		if(getUserID(id) == "false") {
-			HashMap<Object, Object> user = new HashMap<Object, Object>();
+			if(id.isEmpty()) {
+				id = "/users/"+name.toLowerCase();
+			}
+			
+			HashMap<String, String> user = new HashMap<String, String>();
 
 			user.put("id", id);
 			user.put("name", name);
@@ -89,12 +99,15 @@ public class Users {
 			
 			return uri;
 		}
-		return "playerid already exists";
+		return "false";
 	}
 	
 	private static String getUserID(String id) {
-		for (HashMap<Object, Object> user : users) {
-			if(user.get("id").equals("/users/"+id.toLowerCase())) {
+		if(id.indexOf("/") < 0) {
+			id = "/users/"+id.toLowerCase();
+		}
+		for (HashMap<String, String> user : users) {
+			if(user.get("id").equals(id)) {
 				JsonObject result = new JsonObject();
 				result.addProperty("id", user.get("id").toString());
 				result.addProperty("name", user.get("name").toString());
@@ -127,7 +140,7 @@ public class Users {
 			newUri = dataBody.get("uri").toString();
 		}
 		
-		for (HashMap<Object, Object> user : users) {
+		for (HashMap<String, String> user : users) {
 			JsonObject obj = new JsonObject();
 			if(user.get("id").equals("/users/"+userId.toLowerCase())) {
 				user.put("name", newName);
@@ -137,7 +150,7 @@ public class Users {
 		}
 		
 		if(!found) {
-			HashMap<Object, Object> newUser = new HashMap<Object, Object>();
+			HashMap<String, String> newUser = new HashMap<String, String>();
 			newUser.put("id", "/users/"+userId.toLowerCase());
 			newUser.put("name", newName);
 			newUser.put("uri", newUri);
@@ -147,7 +160,7 @@ public class Users {
 	}
 	
 	private static boolean deleteUser(String userId) {
-		for (HashMap<Object, Object> user : users) {
+		for (HashMap<String, String> user : users) {
 			if(user.get("id").equals("/users/"+userId)) {
 				int index = users.indexOf(user);
 				users.remove(index);
