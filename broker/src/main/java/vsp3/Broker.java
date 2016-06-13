@@ -1,8 +1,6 @@
 package vsp3;
 
-import static spark.Spark.get;
-import static spark.Spark.post;
-import static spark.Spark.put;
+import static spark.Spark.*;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -11,10 +9,15 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.reflect.TypeToken;
+import com.mashape.unirest.http.HttpResponse;
+import com.mashape.unirest.http.Unirest;
 
 public class Broker {
 	private static ArrayList<HashMap<Object, Object>> brokers = new ArrayList<HashMap<Object,Object>>();
-	private static HashMap<String, ArrayList<HashMap<Object, Object>>> places = new HashMap<String, ArrayList<HashMap<Object,Object>>>();
+	private static HashMap<Object, ArrayList<HashMap<Object, Object>>> places = new HashMap<Object, ArrayList<HashMap<Object,Object>>>();
+	private static HashMap<Object, HashMap<Object, Object>> owner = new HashMap<Object, HashMap<Object,Object>>();
+	private static HashMap<Object, ArrayList<Object>> hypothecarycredit = new HashMap<Object, ArrayList<Object>>();
+	private static HashMap<Object, HashMap<Object, ArrayList<Object>>> visit = new HashMap<Object, HashMap<Object,ArrayList<Object>>>();
 
 	public static void broker() {
 		post("/broker", (req, res) -> {
@@ -104,6 +107,87 @@ public class Broker {
 				res.status(404);
 				return "Resource could not be found";
 			}
+		});
+		
+		get("/broker/:gameid/places/:placeid/owner", (req, res) -> {
+			String gameID = req.params(":gameid");
+			String placeId = req.params(":placeid");
+			
+			if(checkBrokerExists(gameID) && checkPlaceExists(gameID, placeId)) {
+				res.header("Content-Type", "application/json");
+				return getOwner(gameID, placeId);
+			} else {
+				res.status(404);
+				return "Resource could not be found";
+			}
+		});
+		
+		put("/broker/:gameid/places/:placeid/owner", (req, res) -> {
+			String gameID = req.params(":gameid");
+			String placeId = req.params(":placeid");
+			String requestBody = req.body();
+			
+			if(checkBrokerExists(gameID)) {
+				return updateOwner(gameID, placeId, requestBody);
+			} else {
+				res.status(404);
+				return "Resource could not be found";
+			}			
+		});
+		
+		post("/broker/:gameid/places/:placeid/owner", (req, res) -> {
+			String gameID = req.params(":gameid");
+			String placeId = req.params(":placeid");
+			String requestBody = req.body();
+			
+			if(checkBrokerExists(gameID)) {
+				if(!checkPlaceOwned(gameID, placeId)) {
+					return placeOwner(gameID, placeId, requestBody);
+				} else {
+					res.status(409);
+					return "The place is not for sale - either not buyable or already sold (Conflict)";
+				}
+			} else {
+				res.status(404);
+				return "Resource could not be found";
+			}			
+		});
+	
+		put("/broker/:gameid/places/:placeid/hypothecarycredit", (req, res) -> {
+			String gameID = req.params(":gameid");
+			String placeId = req.params(":placeid");
+			
+			if(checkBrokerExists(gameID) && checkPlaceExists(gameID, placeId)) {
+				return updateHypothecarycredit(gameID, placeId);
+			} else {
+				res.status(404);
+				return "Resource could not be found";
+			}			
+		});
+		
+		delete("/broker/:gameid/places/:placeid/hypothecarycredit", (req, res) -> {
+			String gameID = req.params(":gameid");
+			String placeId = req.params(":placeid");
+			
+			if(checkBrokerExists(gameID) && checkPlaceExists(gameID, placeId)) {
+				return removeHypothecarycredit(gameID, placeId);
+			} else {
+				res.status(404);
+				return "Resource could not be found";
+			}			
+		});
+		
+		post("/broker/:gameid/places/:placeid/visit", (req, res) -> {
+			String gameID = req.params(":gameid");
+			String placeId = req.params(":placeid");
+			String requestBody = req.body();
+			
+			if(checkBrokerExists(gameID) && checkPlaceExists(gameID, placeId)) {
+				return visit(gameID, placeId, requestBody);
+			} else {
+				res.status(404);
+				return "Resource could not be found";
+			}			
 		});
 	}
 	
@@ -249,5 +333,89 @@ public class Broker {
 		result.add("estates", places);
 		
 		return result;
+	}
+	
+	public static JsonObject getOwner(String gameID, String placeId) {
+		String playerUri = (String)owner.get(gameID).get(placeId);
+		JsonObject result = new JsonObject();
+//		getPlayer(playerUri);
+		
+		return result;
+	}
+	
+	public static JsonObject updateOwner(String gameID, String placeId, String requestBody) {
+		Gson gson = new Gson();
+		java.lang.reflect.Type listType = new TypeToken<HashMap<Object, Object>>() {}.getType();
+		HashMap<Object, Object> data = gson.fromJson(requestBody, listType);
+		HashMap<Object, Object> placesHash = owner.get(gameID);
+		String playerUri = data.get("id").toString();
+		
+//		createEvent();
+		owner.get(gameID).put(placeId, playerUri);
+		return null;
+	}
+	
+	public static boolean checkPlaceOwned(String gameID, String placeId) {
+		HashMap<Object, Object> placesHash = owner.get(gameID);
+		
+		return placesHash.containsKey(placeId);
+	}
+	
+	public static JsonObject placeOwner(String gameID, String placeId, String requestBody) {
+		Gson gson = new Gson();
+		java.lang.reflect.Type listType = new TypeToken<HashMap<Object, Object>>() {}.getType();
+		HashMap<Object, Object> data = gson.fromJson(requestBody, listType);
+		HashMap<Object, Object> placesHash = owner.get(gameID);
+		String playerUri = data.get("id").toString();
+		
+//		createEvent();
+		owner.get(gameID).put(placeId, playerUri);
+		return null;
+	}
+	
+	private static void createEvent(String gameID, String placeId, String playerUri, String type) throws Exception {
+		String url=yellowPage.YellowPageService.getServices("events");
+		
+		JsonObject event = new JsonObject();
+		event.addProperty("game", gameID);
+		event.addProperty("type", type);
+		event.addProperty("name", playerUri +"hat" + placeId + "gekauft");
+		event.addProperty("reason", playerUri + "hat bei" + gameID + " " + placeId + " gekauft");
+		event.addProperty("resource", "/dice/");
+		event.addProperty("player", playerUri);
+		String eventString = event.toString();
+		
+		HttpResponse<String> response = Unirest.post(url)
+				.header("accept", "application/json")
+				.header("content-Type", "application/json")
+				.body(eventString)
+				.asString();
+		System.out.println(response.getStatus());
+		System.out.println(response.getBody());
+	}
+	
+	public static JsonObject updateHypothecarycredit(String gameID, String placeId) {
+		hypothecarycredit.get(gameID).add(placeId);
+		
+//		createEvent();
+		return null;
+	}
+	
+	public static JsonObject removeHypothecarycredit(String gameID, String placeId) {
+		Integer index = hypothecarycredit.get(gameID).indexOf(placeId);
+		hypothecarycredit.get(gameID).remove(index);
+		
+//		createEvent();
+		return null;
+	}
+	
+	public static JsonObject visit(String gameID, String placeId, String requestBody) {
+		Gson gson = new Gson();
+		java.lang.reflect.Type listType = new TypeToken<HashMap<Object, Object>>() {}.getType();
+		HashMap<Object, Object> data = gson.fromJson(requestBody, listType);
+		visit.get(gameID).get(placeId).add(data.get("id"));
+		
+//		createEvent();
+		return null;
 	}
 }

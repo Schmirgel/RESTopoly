@@ -22,6 +22,7 @@ public class YellowPageService {
 		body.addProperty("description", service + " Service von Team Awesom");
 		body.addProperty("service", service);
 		body.addProperty("uri", "http://"+ipaddress+":4567/"+service);
+		
 		String bodyString = body.toString();
 	
 		HttpResponse<String> response = Unirest.post("http://172.18.0.5:4567/services")
