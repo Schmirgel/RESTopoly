@@ -11,6 +11,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.reflect.TypeToken;
 import com.mashape.unirest.http.HttpResponse;
 import com.mashape.unirest.http.Unirest;
+import com.mashape.unirest.http.exceptions.UnirestException;
 
 public class Broker {
 	private static ArrayList<HashMap<Object, Object>> brokers = new ArrayList<HashMap<Object,Object>>();
@@ -115,7 +116,13 @@ public class Broker {
 			
 			if(checkBrokerExists(gameID) && checkPlaceExists(gameID, placeId)) {
 				res.header("Content-Type", "application/json");
-				return getOwner(gameID, placeId);
+				String result = getOwner(gameID, placeId);
+				if(result != null) {
+					return getOwner(gameID, placeId);
+				} else {
+					res.status(500);
+					return "can't reach Games Server";
+				}
 			} else {
 				res.status(404);
 				return "Resource could not be found";
@@ -335,24 +342,25 @@ public class Broker {
 		return result;
 	}
 	
-	public static JsonObject getOwner(String gameID, String placeId) {
+	public static String getOwner(String gameID, String placeId) throws UnirestException {
 		String playerUri = (String)owner.get(gameID).get(placeId);
-		JsonObject result = new JsonObject();
-//		getPlayer(playerUri);
-		
-		return result;
+		return getPlayer(playerUri);
 	}
 	
-	public static JsonObject updateOwner(String gameID, String placeId, String requestBody) {
+	public static String updateOwner(String gameID, String placeId, String requestBody) throws Exception {
 		Gson gson = new Gson();
 		java.lang.reflect.Type listType = new TypeToken<HashMap<Object, Object>>() {}.getType();
 		HashMap<Object, Object> data = gson.fromJson(requestBody, listType);
 		HashMap<Object, Object> placesHash = owner.get(gameID);
-		String playerUri = data.get("id").toString();
+		String playerUri = data.get("id").toString();		
 		
-//		createEvent();
-		owner.get(gameID).put(placeId, playerUri);
-		return null;
+		String response = createEvent(gameID, placeId, playerUri, "update Owner");
+		if(response != null) {
+			owner.get(gameID).put(placeId, playerUri);
+			return getEvent(response);
+		} else {
+			return null;
+		}
 	}
 	
 	public static boolean checkPlaceOwned(String gameID, String placeId) {
@@ -361,19 +369,23 @@ public class Broker {
 		return placesHash.containsKey(placeId);
 	}
 	
-	public static JsonObject placeOwner(String gameID, String placeId, String requestBody) {
+	public static String placeOwner(String gameID, String placeId, String requestBody) throws Exception {
 		Gson gson = new Gson();
 		java.lang.reflect.Type listType = new TypeToken<HashMap<Object, Object>>() {}.getType();
 		HashMap<Object, Object> data = gson.fromJson(requestBody, listType);
 		HashMap<Object, Object> placesHash = owner.get(gameID);
 		String playerUri = data.get("id").toString();
 		
-//		createEvent();
-		owner.get(gameID).put(placeId, playerUri);
-		return null;
+		String response = createEvent(gameID, placeId, playerUri, "update Owner");
+		if(response != null) {
+			owner.get(gameID).put(placeId, playerUri);
+			return getEvent(response);
+		} else {
+			return null;
+		}
 	}
 	
-	private static void createEvent(String gameID, String placeId, String playerUri, String type) throws Exception {
+	public static String createEvent(String gameID, String placeId, String playerUri, String type) throws Exception {
 		String url=yellowPage.YellowPageService.getServices("events");
 		
 		JsonObject event = new JsonObject();
@@ -381,7 +393,7 @@ public class Broker {
 		event.addProperty("type", type);
 		event.addProperty("name", playerUri +"hat" + placeId + "gekauft");
 		event.addProperty("reason", playerUri + "hat bei" + gameID + " " + placeId + " gekauft");
-		event.addProperty("resource", "/dice/");
+		event.addProperty("resource", "/broker/");
 		event.addProperty("player", playerUri);
 		String eventString = event.toString();
 		
@@ -390,32 +402,73 @@ public class Broker {
 				.header("content-Type", "application/json")
 				.body(eventString)
 				.asString();
-		System.out.println(response.getStatus());
-		System.out.println(response.getBody());
-	}
-	
-	public static JsonObject updateHypothecarycredit(String gameID, String placeId) {
-		hypothecarycredit.get(gameID).add(placeId);
 		
-//		createEvent();
-		return null;
+		if(response.getStatus() == 201) {
+			return response.getBody();
+		} else {
+			return null;
+		}
 	}
 	
-	public static JsonObject removeHypothecarycredit(String gameID, String placeId) {
-		Integer index = hypothecarycredit.get(gameID).indexOf(placeId);
-		hypothecarycredit.get(gameID).remove(index);
-		
-//		createEvent();
-		return null;
-	}
-	
-	public static JsonObject visit(String gameID, String placeId, String requestBody) {
+	public static String getEvent(String response) throws UnirestException {
 		Gson gson = new Gson();
 		java.lang.reflect.Type listType = new TypeToken<HashMap<Object, Object>>() {}.getType();
-		HashMap<Object, Object> data = gson.fromJson(requestBody, listType);
-		visit.get(gameID).get(placeId).add(data.get("id"));
+		HashMap<Object, Object> data = gson.fromJson(response, listType);
 		
-//		createEvent();
+		String eventUri = (String)data.get("uri");
+		eventUri = eventUri.replaceAll("/events", "");
+		
+		String url=yellowPage.YellowPageService.getServices("events")+eventUri;
+		
+		HttpResponse<String> responseEvent = Unirest.get(url).asString();
+		if(responseEvent.getStatus() == 200) {
+			return responseEvent.getBody();
+		}
+		return null;
+	}
+	
+	public static String updateHypothecarycredit(String gameID, String placeId) throws Exception {
+		String response = createEvent(gameID, placeId, "", "update Owner");
+		if(response != null) {
+			hypothecarycredit.get(gameID).add(placeId);
+			return getEvent(response);
+		} else {
+			return null;
+		}
+	}
+	
+	public static String removeHypothecarycredit(String gameID, String placeId) throws Exception {
+		String response = createEvent(gameID, placeId, "", "update Owner");
+		if(response != null) {
+			Integer index = hypothecarycredit.get(gameID).indexOf(placeId);
+			hypothecarycredit.get(gameID).remove(index);
+			return getEvent(response);
+		} else {
+			return null;
+		}
+	}
+	
+	public static String visit(String gameID, String placeId, String requestBody) throws Exception {
+		String response = createEvent(gameID, placeId, "", "update Owner");
+		if(response != null) {
+			Gson gson = new Gson();
+			java.lang.reflect.Type listType = new TypeToken<HashMap<Object, Object>>() {}.getType();
+			HashMap<Object, Object> data = gson.fromJson(requestBody, listType);
+			visit.get(gameID).get(placeId).add(data.get("id"));
+			return getEvent(response);
+		} else {
+			return null;
+		}
+	}
+	
+	public static String getPlayer(String playerUri) throws UnirestException {
+		playerUri = playerUri.replaceAll("/games", "");
+		String url=yellowPage.YellowPageService.getServices("games")+playerUri;
+		
+		HttpResponse<String> response = Unirest.get(url).asString();
+		if(response.getStatus() == 200) {
+			return response.getBody();
+		}
 		return null;
 	}
 }
