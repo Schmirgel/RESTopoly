@@ -33,17 +33,21 @@ public class Game {
 			HashMap<Object, Object> data = gson.fromJson(requestBody, listType);			
 			
 			if(!data.get("name").toString().contains(" ")) {
-				String result = createGames(data);
 				int createBoardStatus = createBoard(data);
 				
-				if(result != "false" && createBoardStatus == 200) {
-//				if(result != "false") {
-					res.status(201);
-					res.header("Loaction", result);
-					return true;
+				if(createBoardStatus == 200) {
+					String result = createGames(data);
+					if(result != "false") {
+						res.status(201);
+						res.header("Loaction", result);
+						return true;
+					} else {
+						res.status(409);
+						return false;
+					}
 				} else {
-					res.status(409);
-					return false;
+					res.status(503);
+					return "Boards Service Unavailable";
 				}
 			} else {
 				res.status(400);
@@ -61,18 +65,27 @@ public class Game {
 			String requestBody = req.body();
 			
 			if(checkGameIdExists("/games/"+gameID)) {
-				boolean response = createPlayer(gameID, requestBody);
 				int createPawnStatus = createPawn(gameID, requestBody);
-				
-				if(response && createPawnStatus == 200) {
-//				if(response) {
-					res.status(201);
-					res.header("Content-Type", "application/json");
-					return response;
+				if(createPawnStatus == 200) {
+					int createBankAccount = createBankAccount(gameID, requestBody);
+					if(createBankAccount == 201) {
+						boolean response = createPlayer(gameID, requestBody);
+						if(response) {
+							res.status(201);
+							res.header("Content-Type", "application/json");
+							return response;
+						} else {
+							res.status(409);
+							res.header("Content-Type", "application/json");
+							return response;
+						}
+					} else {
+						res.status(503);
+						return "Bank Service Unavailable";	
+					}
 				} else {
-					res.status(409);
-					res.header("Content-Type", "application/json");
-					return response;
+					res.status(503);
+					return "Boards Service Unavailable";
 				}
 			} else {
 				res.status(404);
@@ -178,7 +191,7 @@ public class Game {
 			} else {
 				res.status(404);
 				return "Resource could not be found";
-			}			
+			}		
 		});
 
 		delete("/games/:gameid/players/turn", (req, res) -> {
@@ -862,5 +875,28 @@ public class Game {
 			}
 		}
 		return false;
+	}
+	
+	public static int createBankAccount(String gameID, String requestBody) throws UnirestException {
+		Gson gson = new Gson();
+		java.lang.reflect.Type listType = new TypeToken<HashMap<String, HashMap<Object, Object>>>() {}.getType();
+		HashMap<String, ArrayList<String>> data = gson.fromJson(requestBody, listType);
+		String[] userdata = (data.get("user").toString()).split("/");
+		String username = userdata[2];
+		String boardsUrl = yellowPage.YellowPageService.getServices("banks");
+		String gameUri = "/games/"+data.get("name").toString();
+		
+		JsonObject account = new JsonObject();
+		account.addProperty("player", "/games/"+gameID+"/players/"+username);
+		account.addProperty("saldo", "4000");
+
+		String accountString = account.toString();
+		
+		HttpResponse<String> response = Unirest.post(boardsUrl)
+				.header("accept", "application/json")
+				.header("content-Type", "application/json")
+				.body(accountString)
+				.asString();
+		return response.getStatus();
 	}
 }
